@@ -102,7 +102,7 @@ def clean_keys(json_list):
     return_list = []
     for records in json_list:
         temp_dict = {"EventCode": records.get("Event", {}).get("System", {}).get("EventID", {}).get("#text", ""),
-                    "EventTime": records.get("Event", {}).get("System", {}).get("TimeCreated", {}).get("@SystemTime", ""),
+                    "EventTime": records.get("Event", {}).get("System", {}).get("TimeCreated", {}).get("@SystemTime", "").replace(" ", "T"),
                     "Log": records.get("Event", {}).get("System", {}).get("Channel", ""),
                     "ComputerName": records.get("Event", {}).get("System", {}).get("Computer", ""),
                     "EventRecordId": records.get("Event", {}).get("System", {}).get("EventRecordID", ""), 
