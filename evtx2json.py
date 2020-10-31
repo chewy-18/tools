@@ -8,7 +8,6 @@ import json
 import argparse
 import sys
 
-# Config for enrichment
 config = {
     "4624": {
         "Add": {
@@ -65,10 +64,13 @@ def main():
 
     return_list = []
     for files in final_list:
-        temp_list = process_file(files)
+        temp_list = process_file(files) 
         
         if not args.r:
             temp_list = clean_keys(temp_list)
+            temp_list = sorted(temp_list, key=lambda k: int(k["EventRecordId"]))
+        else: 
+            temp_list = sorted(temp_list, key=lambda k: int(k.get("Event", {}).get("System", {}).get("EventRecordID", ""))) 
             
         if args.e:
             temp_list = enrich_data(temp_list, config)
@@ -87,7 +89,7 @@ def main():
     else:
         print(json.dumps(return_list))
 
-# Convert evtx to json
+
 def process_file(file_location):
     results_list = [] 
     with evtx.Evtx(file_location) as log:
@@ -96,7 +98,6 @@ def process_file(file_location):
 
     return results_list
 
-# Function to clean up the json. Takes a list of json windows events
 def clean_keys(json_list):
     return_list = []
     for records in json_list:
@@ -104,16 +105,19 @@ def clean_keys(json_list):
                     "EventTime": records.get("Event", {}).get("System", {}).get("TimeCreated", {}).get("@SystemTime", ""),
                     "Log": records.get("Event", {}).get("System", {}).get("Channel", ""),
                     "ComputerName": records.get("Event", {}).get("System", {}).get("Computer", ""),
-                    "EventRecordId": records.get("Event", {}).get("System", {}).get("EventRecordID", "")}
+                    "EventRecordId": records.get("Event", {}).get("System", {}).get("EventRecordID", ""), 
+                    "UserData": records.get("Event", {}).get("UserData", {})}
         temp_event_data_dict = {} 
-        for entries in records.get("Event", {}).get("EventData", {}).get("Data", []):
-            temp_event_data_dict[entries["@Name"]] = entries.get("#text", "")
+        if records.get("Event", {}).get("EventData"):
+            for entries in records.get("Event", {}).get("EventData", {}).get("Data", []):
+                temp_event_data_dict[entries["@Name"]] = entries.get("#text", "")
+        for keys, values in records.get("Event", {}).get("System", {}).get("Execution", {}).items():
+            temp_dict[keys] = values
         temp_dict["EventData"] = temp_event_data_dict
         return_list.append(temp_dict)
         
     return return_list
 
-# Function to enrich windows events 
 def enrich_data(json_list, config):
     for records in json_list:
         if records["EventCode"] in config.keys():
